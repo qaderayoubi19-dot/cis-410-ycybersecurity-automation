@@ -2,11 +2,43 @@
 <html>
 <head>
   <title>DevOps App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f6f8;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 500px;
+      margin: 80px auto;
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    h1 {
+      color: #2c3e50;
+    }
+    p {
+      font-size: 18px;
+      margin: 10px 0;
+    }
+    .label {
+      font-weight: bold;
+      color: #555;
+    }
+  </style>
 </head>
 <body>
-  <h1>Deployment Dashboard</h1>
-  <p>Host: {{ hostname }}</p>
-  <p>Commit: {{ commit }}</p>
-  <p>Time: {{ time }}</p>
+
+  <div class="container">
+    <h1>🚀 Deployment Dashboard</h1>
+    <p><span class="label">Host:</span> {{ hostname }}</p>
+    <p><span class="label">Commit:</span> {{ commit[:7] }}</p>
+    <p><span class="label">Time:</span> {{ time }}</p>
+  </div>
+
 </body>
 </html>
