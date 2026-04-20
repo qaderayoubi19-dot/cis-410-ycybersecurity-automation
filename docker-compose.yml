@@ -6,5 +6,5 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - COMMIT_SHA "${GITHUB_SHA}"
-      - DEPLOY_TIME "${DEPLOY_TIME}"
+      - COMMIT_SHA ${GITHUB_SHA}
+      - DEPLOY_TIME ${DEPLOY_TIME}
