@@ -1,75 +1,48 @@
-name: "Setup — Production Server"
+name: Setup Production Server
 
 on:
   workflow_dispatch:
 
 jobs:
   setup:
-    name: "Install Docker on Production VM"
     runs-on: self-hosted
 
     steps:
-      - name: Configure passwordless sudo
+      - name: Create SSH key
         env:
           SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
         run: |
-          printf '%s' "$SSH_KEY" | tr -d ' \t\r\n' | base64 -d > /tmp/prod_key
-          chmod 600 /tmp/prod_key
+          echo "$SSH_KEY" > prod_key
+          chmod 600 prod_key
 
-          ssh -i /tmp/prod_key -o StrictHostKeyChecking=no \
-            ${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }} \
-            "if sudo -n true 2>/dev/null; then
-              echo '=== Passwordless sudo already configured — skipping ==='
-            else
-              echo '=== Configuring passwordless sudo ==='
-              echo '${{ secrets.SUDO_PASS }}' | sudo -S bash -c \
-                'echo \"${{ secrets.PROD_USER }} ALL=(ALL) NOPASSWD:ALL\" > /etc/sudoers.d/${{ secrets.PROD_USER }} && chmod 0440 /etc/sudoers.d/${{ secrets.PROD_USER }}'
-              echo '=== Passwordless sudo configured ==='
-            fi"
-
-          rm /tmp/prod_key
-
-      - name: Install Docker on Production VM
+      - name: Configure sudo and install Docker
         env:
-          SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+          HOST: ${{ secrets.PROD_HOST }}
+          USERNAME: ${{ secrets.PROD_USER }}
+          PASS: ${{ secrets.SUDO_PASS }}
         run: |
-          printf '%s' "$SSH_KEY" | tr -d ' \t\r\n' | base64 -d > /tmp/prod_key
-          chmod 600 /tmp/prod_key
-
-          ssh -i /tmp/prod_key -o StrictHostKeyChecking=no \
-            ${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }} << 'EOF'
+          ssh -i prod_key -o StrictHostKeyChecking=no $USERNAME@$HOST << EOF
           set -e
+
+          echo "$PASS" | sudo -S bash -c "echo '$USERNAME ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/$USERNAME && chmod 0440 /etc/sudoers.d/$USERNAME"
+
+          sudo apt update -y
+          sudo apt install -y curl
+
           if ! command -v docker &> /dev/null; then
-            echo "=== Docker not found — installing ==="
             curl -fsSL https://get.docker.com -o get-docker.sh
             sudo sh get-docker.sh
-            sudo usermod -aG docker $(whoami)
-            sudo mkdir -p /opt/app && sudo chown $(whoami):$(whoami) /opt/app
+            sudo usermod -aG docker $USERNAME
             rm get-docker.sh
-            echo "=== Docker installed successfully ==="
-          else
-            echo "=== Docker already present — skipping install ==="
-            sudo mkdir -p /opt/app && sudo chown $(whoami):$(whoami) /opt/app
           fi
-          EOF
 
-          rm /tmp/prod_key
+          sudo mkdir -p /opt/app
+          sudo chown $USERNAME:$USERNAME /opt/app
 
-      - name: Verify Docker
-        env:
-          SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
-        run: |
-          printf '%s' "$SSH_KEY" | tr -d ' \t\r\n' | base64 -d > /tmp/prod_key
-          chmod 600 /tmp/prod_key
-
-          ssh -i /tmp/prod_key -o StrictHostKeyChecking=no \
-            ${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }} << 'EOF'
-          set -e
-          echo "=== Logged in as: $(whoami) ==="
           docker --version
-          docker compose version
-          ls -la /opt/app
-          echo "=== Production server is ready for deployment ==="
+          docker compose version || true
+          echo "DONE"
           EOF
 
-          rm /tmp/prod_key
+      - name: Cleanup
+        run: rm -f prod_key
