@@ -36,7 +36,7 @@ jobs:
         env:
           SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
         run: |
-          echo "$SSH_KEY" > /tmp/prod_key
+          echo "$SSH_KEY" | base64 -d > /tmp/prod_key
           chmod 600 /tmp/prod_key
 
           ssh -i /tmp/prod_key -o StrictHostKeyChecking=no \
